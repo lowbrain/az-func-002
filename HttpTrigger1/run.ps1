@@ -25,10 +25,11 @@ try {
     Write-Host "Querying Log Analytics API at $logAnalyticsUri"
 
     $apiResponse = Invoke-RestMethod -Method GET -Headers $apiRequestHeader -Uri $logAnalyticsUri
-    foreach ($row in @($apiResponse.tables.rows)) {
-       Write-Host "UserId: $row[0]"
+    for ($i =0; $i -lt $apiResponse.tables.rows.Count; $i++) {
+       Write-Host "UserId: $apiResponse.tables.rows[$i][0]"
     }
 
+    Connect-MgGraph -Identity
     $members = Get-MgGroupMember -GroupId b52a45f4-e990-403e-84f4-1c4a12e35093
     foreach ($member in @($members)) {
        Write-Host "MemberId: $member"
