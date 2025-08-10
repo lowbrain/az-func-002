@@ -5,8 +5,7 @@ param($Request, $TriggerMetadata)
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
-Write-Host $Request.Query
-Write-Host $Request.Body
+Write-Host $Request.data.alertContext.LinkToSearchResultsAPI
 
 # Interact with query parameters or the body of the request.
 $name = $Request.Query.Name
