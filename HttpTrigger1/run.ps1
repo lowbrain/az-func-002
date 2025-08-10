@@ -24,9 +24,14 @@ try {
 
     Write-Host "Querying Log Analytics API at $logAnalyticsUri"
 
-    $apiResponse = Invoke-RestMethod -Method GET -Headers $apiRequestHeader -Uri $logAnalyticsUri 
-    @($apiResponse.tables.rows) | ForEach-Object {
-       Write-Host "UserId: $_[0]"
+    $apiResponse = Invoke-RestMethod -Method GET -Headers $apiRequestHeader -Uri $logAnalyticsUri
+    foreach ($row in @($apiResponse.tables.rows)) {
+       Write-Host "UserId: $row[0]"
+    }
+
+    $members = Get-MgGroupMember -GroupId b52a45f4-e990-403e-84f4-1c4a12e35093
+    foreach ($member in @($members)) {
+       Write-Host "MemberId: $member"
     }
 
     $statusCode = [HttpStatusCode]::OK
