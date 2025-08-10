@@ -14,20 +14,35 @@ Write-Host $Request.Body.data.alertContext.condition.allOf.linkToSearchResultsAP
 Write-Host $env:IDENTITY_ENDPOINT
 Write-Host $env:IDENTITY_HEADER
 
-# Interact with query parameters or the body of the request.
-$name = $Request.Query.Name
-if (-not $name) {
-    $name = $Request.Body.Name
+try {
+    # Azure サービスのリソース URI を指定してローカル エンドポイントからトークンを取得
+    $resourceURI = "https://api.loganalytics.io"
+    $tokenAuthURI = $env:IDENTITY_ENDPOINT + "?resource=$resourceURI&api-version=2019-08-01"
+    $tokenResponse = Invoke-RestMethod -Method Get -Headers @{"X-IDENTITY-HEADER"="$env:IDENTITY_HEADER"} -Uri $tokenAuthURI
+    $accessToken = $tokenResponse.access_token
+
+    Write-Host "Successfully acquired access token."
+
+    $apiRequestHeader = @{
+        "Authorization" = "Bearer $accessToken"
+        "Content-Type"  = "application/json"
+    }
+
+    $logAnalyticsUri = $Request.Body.data.alertContext.condition.allOf.linkToSearchResultsAPI
+
+    Write-Host "Querying Log Analytics API at $logAnalyticsUri"
+
+    $apiResponse = Invoke-RestMethod -Method GET -Headers $apiRequestHeader -Uri $logAnalyticsUri 
+    $body = $apiResponse | ConvertTo-Json -Depth 10
+
+    # Associate values to output bindings by calling 'Push-OutputBinding'.
+    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body = $body
+    })
 }
-
-$body = "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-
-if ($name) {
-    $body = "Hello, $name. This HTTP triggered function executed successfully."
+catch {
+    Write-Error $_.Exception.Message
+    $body = $_.Exception.Message
+    $statusCode = [HttpStatusCode]::InternalServerError
 }
-
-# Associate values to output bindings by calling 'Push-OutputBinding'.
-Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-    StatusCode = [HttpStatusCode]::OK
-    Body = $body
-})
