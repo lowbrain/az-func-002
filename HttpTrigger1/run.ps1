@@ -29,8 +29,9 @@ try {
        Write-Host "UserId: $apiResponse.tables.rows[$i][0]"
     }
 
+    $groupId = "b52a45f4-e990-403e-84f4-1c4a12e35093"
     Connect-MgGraph -Identity
-    $members = Get-MgGroupMember -GroupId b52a45f4-e990-403e-84f4-1c4a12e35093
+    $members = Get-MgGroupMember -GroupId $groupId -Filter "id eq"
     foreach ($member in @($members)) {
        Write-Host "MemberId: $member"
     }
