@@ -29,11 +29,8 @@ try {
     Connect-MgGraph -Identity
     for ($i = 0; $i -lt $apiResponse.tables[0].rows.Count; $i++) {
         $userId = $apiResponse.tables[0].rows[$i][0]
-        Write-Host "UserId: $userId"
-        $members = Get-MgGroupMember -GroupId $groupId -Filter "Id eq '$userId'"
-        Write-Host "Members: $members"
-        Write-Host "MemberCnt: $members.Count"
-        Write-Host "MemberCnt: $members.GetType()"
+        $memberCount = (Get-MgGroupMember -GroupId $groupId -Filter "Id eq '$userId'" -All | Measure-Object).Count
+        Write-Host "memberCount: $memberCount"
     }
 
     $statusCode = [HttpStatusCode]::OK
