@@ -29,7 +29,7 @@ try {
     Connect-MgGraph -Identity
     for ($i = 0; $i -lt $apiResponse.tables[0].rows.Count; $i++) {
         $userId = $apiResponse.tables[0].rows[$i][0]
-        $memberCount = (Get-MgGroupMember -GroupId $groupId -Filter "Id eq '$userId'" -All | Measure-Object).Count
+        $memberCount = (Get-MgGroupMember -GroupId $groupId -Filter "Id eq '$userId'" -All -ErrorAction SilentlyContinue | Measure-Object).Count
         Write-Host "memberCount: $memberCount"
         if ($memberCount -eq 0) {
             New-MgGroupMember -GroupId $groupId -DirectoryObjectId $userId
