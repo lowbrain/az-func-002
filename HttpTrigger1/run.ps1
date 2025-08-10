@@ -31,7 +31,9 @@ try {
         $userId = $apiResponse.tables[0].rows[$i][0]
         Write-Host "UserId: $userId"
         $members = Get-MgGroupMember -GroupId $groupId -Filter "Id eq '$userId'"
-        Write-Host "MemberId: $members.value"
+        Write-Host "Members: $members"
+        Write-Host "MemberCnt: $members.Count"
+        Write-Host "MemberCnt: $members.GetType()"
     }
 
     $statusCode = [HttpStatusCode]::OK
