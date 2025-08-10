@@ -26,12 +26,12 @@ try {
     Write-Host "Querying Log Analytics API at $logAnalyticsUri"
     $apiResponse = Invoke-RestMethod -Method GET -Headers $apiRequestHeader -Uri $logAnalyticsUri
 
-    Connect-MgGraph -Identity
+    Connect-MgGraph -Identity -NoWelcome
     for ($i = 0; $i -lt $apiResponse.tables[0].rows.Count; $i++) {
         $userId = $apiResponse.tables[0].rows[$i][0]
         $memberCount = (Get-MgGroupMember -GroupId $groupId -Filter "Id eq '$userId'" -All -ErrorAction SilentlyContinue | Measure-Object).Count
         Write-Host "memberCount: $memberCount"
-        if ($memberCount -eq 0) {
+        if ($memberCount -eq 1) {
             New-MgGroupMember -GroupId $groupId -DirectoryObjectId $userId
         }
     }
