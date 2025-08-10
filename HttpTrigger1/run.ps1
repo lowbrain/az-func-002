@@ -11,6 +11,8 @@ Write-Host $Request.Body.data.alertContext
 Write-Host $Request.Body.data.alertContext.condition
 Write-Host $Request.Body.data.alertContext.condition.allOf
 Write-Host $Request.Body.data.alertContext.condition.allOf.linkToSearchResultsAPI
+Write-Host $env:MSI_ENDPOINT
+Write-Host $env:MSI_SECRET
 
 # Interact with query parameters or the body of the request.
 $name = $Request.Query.Name
