@@ -28,8 +28,9 @@ try {
 
     Connect-MgGraph -Identity
     for ($i = 0; $i -lt $apiResponse.tables[0].rows.Count; $i++) {
-        Write-Host "UserId: $apiResponse.tables[0].rows[$i][0]"
-        $members = Get-MgGroupMember -GroupId $groupId -Filter "id eq $apiResponse.tables[0].rows[$i][0]"
+        $userId = $apiResponse.tables[0].rows[$i][0]
+        Write-Host "UserId: $userId"
+        $members = Get-MgGroupMember -GroupId $groupId -Filter "id eq $userId"
         Write-Host "MemberId: $members.value"
     }
 
