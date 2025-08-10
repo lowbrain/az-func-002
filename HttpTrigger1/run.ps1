@@ -31,7 +31,7 @@ try {
         $userId = $apiResponse.tables[0].rows[$i][0]
         $memberCount = (Get-MgGroupMember -GroupId $groupId -Filter "Id eq '$userId'" -All -ErrorAction SilentlyContinue | Measure-Object).Count
         Write-Host "memberCount: $memberCount"
-        if ($memberCount -eq 1) {
+        if ($memberCount -eq 0) {
             New-MgGroupMember -GroupId $groupId -DirectoryObjectId $userId
         }
     }
