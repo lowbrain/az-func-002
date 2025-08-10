@@ -30,7 +30,7 @@ try {
     for ($i = 0; $i -lt $apiResponse.tables[0].rows.Count; $i++) {
         $userId = [guid]$apiResponse.tables[0].rows[$i][0]
         Write-Host "UserId: $userId"
-        $filter = "id eq $userId"
+        $filter = "id eq guid'$userId'"
         Write-Host "filter: $filter"
         $members = Get-MgGroupMember -GroupId $groupId -Filter $filter
         Write-Host "MemberId: $members.value"
