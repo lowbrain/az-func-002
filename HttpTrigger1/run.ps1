@@ -34,15 +34,16 @@ try {
 
     $apiResponse = Invoke-RestMethod -Method GET -Headers $apiRequestHeader -Uri $logAnalyticsUri 
     $body = $apiResponse | ConvertTo-Json -Depth 10
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body = $body
-    })
+    $statusCode = [HttpStatusCode]::OK
 }
 catch {
     Write-Error $_.Exception.Message
     $body = $_.Exception.Message
     $statusCode = [HttpStatusCode]::InternalServerError
 }
+
+# Associate values to output bindings by calling 'Push-OutputBinding'.
+Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+    StatusCode = $statusCode
+    Body = $body
+})
