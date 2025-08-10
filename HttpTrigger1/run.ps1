@@ -25,7 +25,7 @@ try {
     Write-Host "Querying Log Analytics API at $logAnalyticsUri"
 
     $apiResponse = Invoke-RestMethod -Method GET -Headers $apiRequestHeader -Uri $logAnalyticsUri 
-    $apiResponse. tables.rows | ForEach-Object {
+    @($apiResponse.tables.rows) | ForEach-Object {
        Write-Host "UserId: $_[0]"
     }
 
@@ -35,8 +35,6 @@ catch {
     Write-Error $_.Exception.Message
     $statusCode = [HttpStatusCode]::InternalServerError
 }
-
-Write-Host "Result: $body"
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
