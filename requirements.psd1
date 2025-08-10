@@ -3,4 +3,5 @@
 #
 @{
     'Az.Accounts' = '5.*'
+    'Microsoft.Graph.Groups' = '2.*'
 }
