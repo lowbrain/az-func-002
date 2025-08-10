@@ -25,7 +25,7 @@ try {
     Write-Host "Querying Log Analytics API at $logAnalyticsUri"
 
     $apiResponse = Invoke-RestMethod -Method GET -Headers $apiRequestHeader -Uri $logAnalyticsUri
-    for ($i =0; $i -lt $apiResponse.tables.rows.Count; $i++) {
+    for ($i = 0; $i -lt $apiResponse.tables[0].rows.Count; $i++) {
        Write-Host "UserId: $apiResponse.tables.rows[$i][0]"
     }
 
