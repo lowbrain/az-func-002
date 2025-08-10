@@ -30,7 +30,7 @@ try {
     for ($i = 0; $i -lt $apiResponse.tables[0].rows.Count; $i++) {
         Write-Host "UserId: $apiResponse.tables.rows[$i][0]"
         $members = Get-MgGroupMember -GroupId $groupId -Filter "id eq $apiResponse.tables.rows[$i][0]"
-        Write-Host "MemberId: $member.value"
+        Write-Host "MemberId: $members.value"
     }
 
     $statusCode = [HttpStatusCode]::OK
