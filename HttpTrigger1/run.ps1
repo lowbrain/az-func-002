@@ -3,47 +3,93 @@ using namespace System.Net
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
 
-# Write to the Azure Functions log stream.
-Write-Host "PowerShell HTTP trigger function processed a request."
+# モジュールをインポートします。Azure Functions の環境では、'modules' ディレクトリ内のモジュールは
+# 自動的に利用可能になることが多いですが、明示的にインポートすることで、スクリプトの依存関係が明確になります。
+Import-Module -Name ($PSScriptRoot + "/../modules/LogAnalyticsApi.psm1") -Force
+Import-Module -Name ($PSScriptRoot + "/../modules/MgGraphApi.psm1") -Force
+
+# [CONFIG] Entra セキュリティグループ ID を環境変数から取得します。
+# ハードコーディングを避けることで、コードを変更せずに異なる環境で関数を再利用できます。
+$groupId = $env:TARGET_GROUP_ID
+if (-not $groupId) {
+    # 必須の設定がない場合は、明確なエラーで処理を停止します。
+    throw "環境変数 'TARGET_GROUP_ID' が設定されていません。"
+}
+
+# HTTPレスポンスのデフォルトステータスコードを設定します。
+$statusCode = [HttpStatusCode]::OK
+$responseBody = ""
 
 try {
-    # Azure サービスのリソース URI を指定してローカル エンドポイントからトークンを取得
-    $resourceURI = "https://api.loganalytics.io"
-    $tokenAuthURI = $env:IDENTITY_ENDPOINT + "?resource=$resourceURI&api-version=2019-08-01"
-    $tokenResponse = Invoke-RestMethod -Method Get -Headers @{"X-IDENTITY-HEADER"="$env:IDENTITY_HEADER"} -Uri $tokenAuthURI
-    $accessToken = $tokenResponse.access_token
-    $groupId = "b52a45f4-e990-403e-84f4-1c4a12e35093"
+    # 1. リクエストボディから Log Analytics の検索結果 API の URI を取得します。
+    # このURIは、アラートのコンテキストに含まれています。
+    $logAnalyticsUri = $Request.Body.data.alertContext.condition.allOf.linkToSearchResultsAPI
+    if (-not $logAnalyticsUri) {
+        # 必要なURIが見つからない場合は、エラーをスローして処理を中断します。
+        throw "リクエストボディに 'linkToSearchResultsAPI' が含まれていません。"
+    }
+    Write-Information "Log Analytics API の URI を取得しました: $logAnalyticsUri"
 
-    Write-Host "Successfully acquired access token."
+    # 2. LogAnalyticsApi モジュールの関数を呼び出して、API アクセストークンを取得します。
+    # この関数は、ローカル開発環境とAzure環境（マネージドID）の両方に対応しています。
+    Write-Information "Log Analytics API のアクセストークンを取得しています..."
+    $accessToken = Get-LogAnalyticsAccessToken -Verbose
+    Write-Information "アクセストークンの取得に成功しました。"
 
-    $apiRequestHeader = @{
-        "Authorization" = "Bearer $accessToken"
-        "Content-Type"  = "application/json"
+    # 3. 取得したトークンとURIを使って、Log Analytics API にクエリを実行します。
+    Write-Information "Log Analytics API にクエリを実行しています..."
+    $apiResponse = Invoke-LogAnalyticsQuery -QueryUri $logAnalyticsUri -AccessToken $accessToken -Verbose
+
+    # 4. APIの応答からユーザーIDのリストを作成します。
+    # Log Analytics の結果はネストされた配列になっているため、適切に展開します。
+    # ForEach-Object を使用して、より簡潔で PowerShell らしい方法でリストを生成します。
+    $userIdList = if ($apiResponse.tables[0].rows) {
+        $apiResponse.tables[0].rows | ForEach-Object { [string]$_[0] }
+    } else {
+        @() # 処理対象がない場合は空の配列を返す
     }
 
-    $logAnalyticsUri = $Request.Body.data.alertContext.condition.allOf.linkToSearchResultsAPI
+    # 5. 処理対象のユーザーがいる場合のみ、Graph API 処理を実行します。
+    if ($userIdList.Count -gt 0) {
+        Write-Information "$($userIdList.Count) 件のユーザーをグループに追加する処理を開始します。"
 
-    Write-Host "Querying Log Analytics API at $logAnalyticsUri"
-    $apiResponse = Invoke-RestMethod -Method GET -Headers $apiRequestHeader -Uri $logAnalyticsUri
+        # Microsoft Graph に接続します。
+        Write-Information "Microsoft Graph に接続しています..."
+        Connect-MgGraphApi -Verbose
+        Write-Information "Microsoft Graph への接続に成功しました。"
 
-    Connect-MgGraph -Identity -NoWelcome
-    for ($i = 0; $i -lt $apiResponse.tables[0].rows.Count; $i++) {
-        $userId = $apiResponse.tables[0].rows[$i][0]
-        $memberCount = (Get-MgGroupMember -GroupId $groupId -Filter "Id eq '$userId'" -All -ErrorAction SilentlyContinue | Measure-Object).Count
-        Write-Host "memberCount: $memberCount"
-        if ($memberCount -eq 0) {
-            New-MgGroupMember -GroupId $groupId -DirectoryObjectId $userId
+        # ユーザーリストをグループに追加します。
+        Add-MgGroupMemberBulk -GroupId $groupId -UserIdList $userIdList -Verbose
+
+        $responseBody = @{
+            status  = "Success"
+            message = "グループメンバーの更新処理が完了しました。"
+            usersProcessed = $userIdList.Count
         }
     }
-
-    $statusCode = [HttpStatusCode]::OK
+    else {
+        Write-Information "Log Analytics のクエリ結果に処理対象のユーザーは含まれていませんでした。"
+        $responseBody = @{
+            status  = "Success"
+            message = "処理対象のユーザーがいなかったため、処理をスキップしました。"
+            usersProcessed = 0
+        }
+    }
 }
 catch {
-    Write-Error $_.Exception.Message
+    # エラーが発生した場合は、ログに出力し、ステータスコードを500に設定します。
+    Write-Error "関数の実行中にエラーが発生しました: $($_.Exception.Message)"
+    Write-Error $_.ScriptStackTrace
     $statusCode = [HttpStatusCode]::InternalServerError
+    $responseBody = @{
+        status  = "Error"
+        message = $_.Exception.Message
+    }
 }
 
-# Associate values to output bindings by calling 'Push-OutputBinding'.
+# 関数の実行結果をHTTPレスポンスとして返します。
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
     StatusCode = $statusCode
+    Body       = ($responseBody | ConvertTo-Json -Depth 3)
+    Headers    = @{ "Content-Type" = "application/json; charset=utf-8" }
 })
