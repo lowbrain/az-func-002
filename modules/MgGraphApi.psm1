@@ -62,8 +62,8 @@ function Add-MgGroupMemberBulk {
     try {
         Write-Verbose "グループ '$($GroupId)' の既存メンバーを取得しています..."
         # 既存のメンバーIDをすべて取得し、高速な検索のためにハッシュセットに格納する
-        $existingMembers = Get-MgGroupMember -GroupId $GroupId -All -ErrorAction Stop | Select-Object -ExpandProperty Id
-        $existingMemberSet = [System.Collections.Generic.HashSet[string]]::new($existingMembers)
+        $existingMembers = @(Get-MgGroupMember -GroupId $GroupId -All -ErrorAction Stop | Select-Object -ExpandProperty Id)
+        $existingMemberSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$existingMembers)
         Write-Verbose "$($existingMemberSet.Count) 人の既存メンバーが見つかりました。"
 
         # 追加対象のユーザーリストから、まだメンバーでないユーザーを抽出する
