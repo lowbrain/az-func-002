@@ -32,12 +32,12 @@ try {
 
     # 2. LogAnalyticsApi モジュールの関数を呼び出して、API アクセストークンを取得します。
     # この関数は、ローカル開発環境とAzure環境（マネージドID）の両方に対応しています。
-    Write-Information "Log Analytics API のアクセストークンを取得しています..."
+    Write-Verbose "Log Analytics API のアクセストークンを取得しています..."
     $accessToken = Get-LogAnalyticsAccessToken -Verbose
-    Write-Information "アクセストークンの取得に成功しました。"
+    Write-Verbose "アクセストークンの取得に成功しました。"
 
     # 3. 取得したトークンとURIを使って、Log Analytics API にクエリを実行します。
-    Write-Information "Log Analytics API にクエリを実行しています..."
+    Write-Verbose "Log Analytics API にクエリを実行しています..."
     $apiResponse = Invoke-LogAnalyticsQuery -QueryUri $logAnalyticsUri -AccessToken $accessToken -Verbose
 
     # 4. APIの応答からユーザーIDのリストを作成します。
@@ -51,12 +51,13 @@ try {
 
     # 5. 処理対象のユーザーがいる場合のみ、Graph API 処理を実行します。
     if ($userIdList.Count -gt 0) {
-        Write-Information "$($userIdList.Count) 件のユーザーをグループに追加する処理を開始します。"
+        # 処理対象のユーザーIDをログに出力します。IDのリストが長くなる可能性がある点に注意してください。
+        Write-Information "グループに追加するユーザー ($($userIdList.Count) 件): $($userIdList -join ', ')"
 
         # Microsoft Graph に接続します。
-        Write-Information "Microsoft Graph に接続しています..."
+        Write-Verbose "Microsoft Graph に接続しています..."
         Connect-MgGraphApi -Verbose
-        Write-Information "Microsoft Graph への接続に成功しました。"
+        Write-Verbose "Microsoft Graph への接続に成功しました。"
 
         # ユーザーリストをグループに追加します。
         Add-MgGroupMemberBulk -GroupId $groupId -UserIdList $userIdList -Verbose
